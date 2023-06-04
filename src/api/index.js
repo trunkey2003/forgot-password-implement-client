@@ -32,3 +32,12 @@ export const resetPasswordLoader = async ({ request, params, context }) => {
         };
       }
 };
+
+export const forgotPasswordLoader = async ({ request, params, context }) => {
+  try {
+    const {data} = await Axios.get('/api/v1/auth/get-captcha');
+    return data;
+  } catch {
+    throw new Error("Something went wrong");
+  }
+};

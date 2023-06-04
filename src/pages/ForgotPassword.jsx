@@ -1,25 +1,58 @@
 import { useState } from "react";
 import MainLayout from "../layouts/MainLayout";
-import { Button, Form, Input, message } from "antd";
+import { Button, Form, Input, message, notification } from "antd";
 import Axios from "../api/axios";
+import { useLoaderData } from "react-router-dom";
+import { RetweetOutlined } from "@ant-design/icons";
 
 export default function ForgotPassword() {
+  const [form] = Form.useForm();
+  const [loaderData, setLoaderData] = useState(useLoaderData());
   const [loading, setLoading] = useState(false);
   const [isSentSuccess, setIsSentSuccess] = useState(false);
+  const [api, contextHolder] = notification.useNotification();
 
-  const onFinish = async ({ email }) => {
+  const onFinish = async ({ email, captchaValue }) => {
     try {
       setLoading(true);
-      await Axios.post("/api/v1/auth/forgot-password", { email });
+      const { data } = await Axios.post("/api/v1/auth/forgot-password", {
+        email,
+        captcha_id: loaderData["captcha_id"],
+        captcha_value: captchaValue,
+      });
       message.success("Sent email to reset password, please check your email");
       setIsSentSuccess(true);
-    } catch {
-      message.error("Something went wrong, please try again later");
+    } catch (error) {
+      const { data } = error.response;
+      if (data && data["isCaptchaVerified"] === false) {
+        api.error({
+          message: "Captcha is not verified",
+          description: "Please enter correct captcha",
+        });
+        form.resetFields();
+      } else {
+        message.error("Something went wrong, please try again later");
+      }
+      handleRegenerateCaptcha();
       setIsSentSuccess(false);
     } finally {
       setLoading(false);
     }
   };
+
+  const handleRegenerateCaptcha = async () => {
+    try {
+      const { data } = await Axios.get("/api/v1/auth/get-captcha", {
+        params: {
+          previous_captcha_id: loaderData["captcha_id"],
+        },
+      });
+      setLoaderData(data);
+    } catch {
+      message.error("Something went wrong, please try again later");
+    }
+  };
+
   return (
     <MainLayout>
       <div className="h-screen bg-blue-100 flex items-center">
@@ -46,7 +79,8 @@ export default function ForgotPassword() {
                     </p>
                   </div>
                   <Form
-                  requiredMark={false}
+                    form={form}
+                    requiredMark={false}
                     onFinish={onFinish}
                     layout="vertical"
                     className="px-8 pt-6 pb-8 mb-4 bg-white rounded"
@@ -66,11 +100,38 @@ export default function ForgotPassword() {
                         placeholder="Enter Email Address..."
                       />
                     </Form.Item>
+                    <Form.Item label="Captcha">
+                      <div className="flex items-center space-x-4">
+                        <img
+                          src={`data:image/jpeg;base64,${loaderData["captcha_image"]}`}
+                          alt="captcha-image"
+                        />
+                        <RetweetOutlined
+                          onClick={handleRegenerateCaptcha}
+                          className="text-blue-600 text-[25px] hover:cursor-pointer hover:opacity-80"
+                        />
+                      </div>
+                    </Form.Item>
+                    <Form.Item
+                      name={"captchaValue"}
+                      rules={[
+                        { required: true, message: "Please enter captcha" },
+                        { len: 6, message: "Captcha must be 6 characters" },
+                      ]}
+                    >
+                      <Input
+                        className="w-1/2 px-3 py-2 text-sm leading-tight text-gray-700 border rounded shadow appearance-none focus:outline-none focus:shadow-outline"
+                        id="captcha"
+                        type="text"
+                        placeholder="Enter Captcha..."
+                      />
+                    </Form.Item>
                     <Form.Item className="mb-6 text-center">
                       <Button
                         htmlType="submit"
                         size="large"
                         loading={loading}
+                        disabled={loading}
                         className="w-full flex items-center justify-center font-bold text-white bg-blue-500 rounded-full hover:bg-blue-600 focus:outline-none focus:shadow-outline"
                       >
                         Reset Password
@@ -105,6 +166,7 @@ export default function ForgotPassword() {
           </div>
         </div>
       </div>
+      {contextHolder}
     </MainLayout>
   );
 }

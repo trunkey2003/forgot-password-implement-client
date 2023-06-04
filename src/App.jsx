@@ -7,7 +7,7 @@ import { Provider } from "react-redux";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword/ResetPassword";
 import Axios from "./api/axios";
-import { resetPasswordLoader } from "./api";
+import { forgotPasswordLoader, resetPasswordLoader } from "./api";
 import ResetPasswordErrorPage from "./pages/ResetPassword/ResetPasswordErrorPage";
 import ResetPasswordSuccess from "./pages/ResetPassword/ResetPasswordSuccess";
 
@@ -19,7 +19,7 @@ const router = createBrowserRouter([
   },
   {
     path: "/forgot-password",
-    loader: () => ({ message: "success" }),
+    loader: forgotPasswordLoader,
     element: <ForgotPassword />,
     errorElement: <ErrorPage />,
   },
